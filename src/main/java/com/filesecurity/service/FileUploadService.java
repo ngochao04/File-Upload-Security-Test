@@ -37,10 +37,8 @@ public class FileUploadService {
         log.info("Upload attempt: file='{}', size={}, ip={}", originalName, file.getSize(), clientIp);
 
         try {
-            // === VALIDATION ===
             UploadResult.ValidationDetail detail = validationService.validate(file);
 
-            // Check all validations
             if (!detail.isExtensionValid()) {
                 return saveAndReturn(false, originalName, detail, clientIp,
                     "Loại file không được phép: ." + detail.getFileExtension() +
@@ -74,11 +72,9 @@ public class FileUploadService {
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             Files.createDirectories(uploadPath);
 
-            // Generate UUID-based stored name to prevent enumeration
             String storedName = UUID.randomUUID() + "_" + detail.getSanitizedFileName();
             Path targetPath = uploadPath.resolve(storedName).normalize();
 
-            // Ensure target is within upload dir (prevent path traversal in storage)
             if (!targetPath.startsWith(uploadPath)) {
                 return saveAndReturn(false, originalName, detail, clientIp,
                     "Path traversal attack detected in storage path",
@@ -87,7 +83,6 @@ public class FileUploadService {
 
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Save record to DB
             FileRecord record = FileRecord.builder()
                 .originalName(originalName)
                 .sanitizedName(detail.getSanitizedFileName())
@@ -153,6 +148,35 @@ public class FileUploadService {
             .rejectionReason(reason)
             .validationDetail(detail)
             .build();
+    }
+
+    /**
+     * Xóa toàn bộ records trong DB và file vật lý trong thư mục uploads.
+     * Được gọi khi: (1) load trang GET /, (2) nhấn nút Reset trên UI.
+     */
+    public void resetAll() {
+        // Xóa toàn bộ records trong DB
+        fileRecordRepository.deleteAll();
+        log.info("Reset: all file records deleted from DB");
+
+        // Xóa file vật lý trong thư mục uploads
+        try {
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            if (Files.exists(uploadPath)) {
+                Files.walk(uploadPath)
+                    .filter(Files::isRegularFile)
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            log.warn("Could not delete file: {}", p);
+                        }
+                    });
+            }
+            log.info("Reset: all uploaded files deleted from disk");
+        } catch (IOException e) {
+            log.warn("Reset: could not walk upload directory: {}", e.getMessage());
+        }
     }
 
     public List<FileRecord> getAllRecords() {

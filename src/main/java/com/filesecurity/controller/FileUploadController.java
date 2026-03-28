@@ -25,11 +25,14 @@ public class FileUploadController {
 
     @GetMapping("/")
     public String index(Model model) {
+        // Tự động reset mỗi khi F5 / load lại trang
+        uploadService.resetAll();
+
         model.addAttribute("allowedExtensions", validationService.getAllowedExtensions());
         model.addAttribute("maxSizeMB", validationService.getMaxSizeBytes() / (1024 * 1024));
-        model.addAttribute("totalSuccess", uploadService.countSuccess());
-        model.addAttribute("totalRejected", uploadService.countRejected());
-        model.addAttribute("totalStorage", FileUploadService.formatSize(uploadService.totalStorage()));
+        model.addAttribute("totalSuccess", 0);
+        model.addAttribute("totalRejected", 0);
+        model.addAttribute("totalStorage", "0 B");
         return "index";
     }
 
@@ -80,5 +83,16 @@ public class FileUploadController {
         stats.put("totalRejected", uploadService.countRejected());
         stats.put("totalStorage", FileUploadService.formatSize(uploadService.totalStorage()));
         return ResponseEntity.ok(stats);
+    }
+
+    // Endpoint cho nút Reset trên UI
+    @PostMapping("/reset")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> reset() {
+        uploadService.resetAll();
+        Map<String, Object> res = new HashMap<>();
+        res.put("success", true);
+        res.put("message", "Đã reset toàn bộ lịch sử upload.");
+        return ResponseEntity.ok(res);
     }
 }

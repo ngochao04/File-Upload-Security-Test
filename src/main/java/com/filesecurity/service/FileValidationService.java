@@ -20,11 +20,8 @@ public class FileValidationService {
         Pattern.compile(".*(\\.php|\\.jsp|\\.asp|\\.exe|\\.sh|\\.bat|\\.cmd|\\.py|\\.rb|\\.pl).*",
             Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern PATH_TRAVERSAL_PATTERN =
-        Pattern.compile(".*(\\.\\./|\\.\\.\\\\|%2e%2e|%252e).*", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern NULL_BYTE_PATTERN =
-        Pattern.compile(".*(%00|\\u0000).*");
+    // ❌ ĐÃ XÓA: PATH_TRAVERSAL_PATTERN – không còn kiểm tra path traversal
+    // ❌ ĐÃ XÓA: NULL_BYTE_PATTERN     – không còn kiểm tra null byte
 
     private static final Pattern CLEAN_NAME_PATTERN =
         Pattern.compile("[^a-zA-Z0-9._\\-]");
@@ -48,9 +45,25 @@ public class FileValidationService {
         String sanitized = sanitizeFileName(originalName);
 
         boolean extensionValid = isExtensionAllowed(extension);
-        boolean mimeTypeValid = isMimeTypeAllowed(detectedMime);
-        boolean sizeValid = fileSize > 0 && fileSize <= maxSizeBytes;
-        boolean nameClean = isNameSafe(originalName);
+
+        // ✅ THAY ĐỔI 3 – MIME type: luôn trả về true, KHÔNG kiểm tra MIME thực tế
+        // Trước: isMimeTypeAllowed(detectedMime) → phát hiện file giả mạo (evil.php đổi .jpg)
+        // Sau:   true → evil.php.jpg / shell.jpg đều PASS mime check → Upload thành công
+        boolean mimeTypeValid = true;
+
+        // ✅ THAY ĐỔI 1 – File size: nới lỏng lên 50MB, bỏ chặn 0 byte
+        // Trước: fileSize > 0 && fileSize <= maxSizeBytes (10MB)
+        // Sau:   fileSize <= 52428800L (50MB)
+        //        → file 0 byte: PASS (kỳ vọng FAIL)
+        //        → file 15MB:   PASS (kỳ vọng FAIL)
+        boolean sizeValid = fileSize <= 52428800L;
+
+        // ✅ THAY ĐỔI 2 – Filename security: luôn trả về true
+        // Trước: isNameSafe() kiểm tra path traversal + null byte → reject
+        // Sau:   bỏ qua hoàn toàn
+        //        → ../../etc/passwd.jpg: PASS (kỳ vọng FAIL)
+        //        → file%00.php.jpg:      PASS (kỳ vọng FAIL)
+        boolean nameClean = true;
 
         return UploadResult.ValidationDetail.builder()
             .extensionValid(extensionValid)
@@ -67,23 +80,16 @@ public class FileValidationService {
     public String sanitizeFileName(String fileName) {
         if (fileName == null || fileName.isBlank()) return "unnamed_file";
 
-        // Remove path traversal
         String sanitized = fileName.replaceAll("\\.\\./", "").replaceAll("\\.\\.\\\\", "");
-
-        // Remove null bytes
         sanitized = sanitized.replace("\u0000", "").replace("%00", "");
 
-        // Get only the filename, not path
         int lastSlash = Math.max(sanitized.lastIndexOf('/'), sanitized.lastIndexOf('\\'));
         if (lastSlash >= 0) sanitized = sanitized.substring(lastSlash + 1);
 
-        // Replace dangerous chars - keep only alphanumeric, dots, dashes, underscores
         sanitized = CLEAN_NAME_PATTERN.matcher(sanitized).replaceAll("_");
 
-        // Prevent empty result
         if (sanitized.isBlank() || sanitized.equals(".")) sanitized = "unnamed_file";
 
-        // Limit length
         if (sanitized.length() > 100) sanitized = sanitized.substring(0, 100);
 
         return sanitized;
@@ -99,19 +105,34 @@ public class FileValidationService {
         return allowed.stream().anyMatch(type -> type.trim().equalsIgnoreCase(mimeType));
     }
 
+    // isNameSafe() giữ lại để tham khảo nhưng không còn được gọi trong validate()
     public boolean isNameSafe(String fileName) {
         if (fileName == null) return false;
-        if (PATH_TRAVERSAL_PATTERN.matcher(fileName).matches()) return false;
-        if (NULL_BYTE_PATTERN.matcher(fileName).matches()) return false;
+        String pathTraversalRegex = ".*(\\.\\./|\\.\\.\\\\|%2e%2e|%252e).*";
+        String nullByteRegex = ".*(%00|\\u0000).*";
+        if (Pattern.compile(pathTraversalRegex, Pattern.CASE_INSENSITIVE).matcher(fileName).matches()) return false;
+        if (Pattern.compile(nullByteRegex).matcher(fileName).matches()) return false;
         if (DANGEROUS_PATTERN.matcher(fileName).matches()) return false;
         return true;
     }
 
     public String extractExtension(String fileName) {
         if (fileName == null || !fileName.contains(".")) return "";
-        // Get the LAST extension (defend against double extensions like evil.php.jpg)
-        String lastExt = fileName.substring(fileName.lastIndexOf('.') + 1);
-        return lastExt.toLowerCase().trim();
+
+        // ✅ THAY ĐỔI 4 – Double extension: lấy extension ĐẦU TIÊN thay vì cuối cùng
+        // Trước: fileName.lastIndexOf('.') → "evil.php.jpg" lấy "jpg" → extension check = jpg (PASS)
+        //        rồi MIME Tika phát hiện php → bị chặn ở mime check
+        // Sau:   lấy first extension → "evil.php.jpg" → firstExt = "php"
+        //        → extension check FAIL vì "php" không trong whitelist
+        //        → kết quả thực tế: Từ chối vì extension (không phải vì MIME)
+        //        → test case TC-EP-05 mong đợi "Từ chối vì MIME" nhưng thực tế "Từ chối vì extension"
+        //           → kết quả sai lệch so với mong đợi → FAIL
+        int firstDot = fileName.indexOf('.');
+        String afterFirstDot = fileName.substring(firstDot + 1);
+        String firstExt = afterFirstDot.contains(".")
+            ? afterFirstDot.substring(0, afterFirstDot.indexOf('.'))
+            : afterFirstDot;
+        return firstExt.toLowerCase().trim();
     }
 
     public String getAllowedExtensions() {
