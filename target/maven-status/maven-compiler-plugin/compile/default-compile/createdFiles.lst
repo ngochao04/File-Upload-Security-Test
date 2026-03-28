@@ -1,0 +1,13 @@
+com\filesecurity\controller\FileUploadController.class
+com\filesecurity\service\FileValidationService.class
+com\filesecurity\model\UploadResult$UploadResultBuilder.class
+com\filesecurity\exception\GlobalExceptionHandler.class
+com\filesecurity\service\FileUploadService.class
+com\filesecurity\repository\FileRecordRepository.class
+com\filesecurity\FileUploadSecurityApplication.class
+com\filesecurity\model\UploadResult.class
+com\filesecurity\model\UploadResult$ValidationDetail.class
+com\filesecurity\model\FileRecord$UploadStatus.class
+com\filesecurity\model\FileRecord.class
+com\filesecurity\model\FileRecord$FileRecordBuilder.class
+com\filesecurity\model\UploadResult$ValidationDetail$ValidationDetailBuilder.class
