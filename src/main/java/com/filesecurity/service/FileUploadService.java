@@ -1,5 +1,6 @@
 package com.filesecurity.service;
 
+import java.util.Locale;
 import com.filesecurity.model.FileRecord;
 import com.filesecurity.model.UploadResult;
 import com.filesecurity.repository.FileRecordRepository;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -209,7 +211,7 @@ public class FileUploadService {
 
     public static String formatSize(long bytes) {
         if (bytes < 1024) return bytes + " B";
-        else if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        else return String.format("%.1f MB", bytes / (1024.0 * 1024));
+        else if (bytes < 1024 * 1024) return String.format(Locale.US, "%.1f KB", bytes / 1024.0);
+        else return String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024));
     }
 }

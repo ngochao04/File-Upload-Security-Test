@@ -108,7 +108,7 @@ public class FileValidationService {
     // isNameSafe() giữ lại để tham khảo nhưng không còn được gọi trong validate()
     public boolean isNameSafe(String fileName) {
         if (fileName == null) return false;
-        String pathTraversalRegex = ".*(\\.\\./|\\.\\.\\\\|%2e%2e|%252e).*";
+        String pathTraversalRegex = ".*(\\.\\./|\\.\\.\\\\|\\.\\.|%2e%2e|%2e%2f|%2f\\.\\.|%252e|\\.\\.%2f|\\.\\.%5c).*";
         String nullByteRegex = ".*(%00|\\u0000).*";
         if (Pattern.compile(pathTraversalRegex, Pattern.CASE_INSENSITIVE).matcher(fileName).matches()) return false;
         if (Pattern.compile(nullByteRegex).matcher(fileName).matches()) return false;

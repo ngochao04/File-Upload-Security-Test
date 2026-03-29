@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException; // ← thêm import này
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -22,8 +23,17 @@ public class GlobalExceptionHandler {
 
     private final FileRecordRepository fileRecordRepository;
 
-    // Tránh lưu DB nhiều lần cho cùng 1 request (Spring throw exception nhiều tầng)
     private static final ConcurrentHashMap<String, Long> recentlyHandled = new ConcurrentHashMap<>();
+
+    // ← THÊM HANDLER NÀY VÀO (đặt trước handler Exception.class chung)
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingPart(MissingServletRequestPartException e) {
+        log.warn("Missing request part: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(Map.of(
+            "success", false,
+            "message", "Vui lòng chọn file trước khi upload."
+        ));
+    }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleMaxSizeException(
@@ -34,7 +44,6 @@ public class GlobalExceptionHandler {
         long now = System.currentTimeMillis();
         Long last = recentlyHandled.get(clientIp);
 
-        // Nếu đã xử lý trong vòng 2 giây thì bỏ qua, không lưu DB thêm
         if (last != null && now - last < 2000) {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
@@ -45,7 +54,6 @@ public class GlobalExceptionHandler {
 
         log.warn("File too large: {}", e.getMessage());
 
-        // Lấy tên file từ request header nếu có
         String originalName = "unknown";
         try {
             String disposition = request.getHeader("Content-Disposition");
@@ -56,7 +64,6 @@ public class GlobalExceptionHandler {
 
         String reason = "File vượt quá kích thước tối đa cho phép (10MB). Upload bị từ chối.";
 
-        // Lưu vào lịch sử
         FileRecord record = FileRecord.builder()
             .originalName(originalName)
             .sanitizedName(originalName)

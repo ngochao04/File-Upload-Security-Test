@@ -1,5 +1,6 @@
 package com.filesecurity.service;
 
+import static org.mockito.Mockito.lenient;
 import com.filesecurity.model.FileRecord;
 import com.filesecurity.model.UploadResult;
 import com.filesecurity.repository.FileRecordRepository;
@@ -16,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
@@ -42,15 +44,14 @@ class FileUploadServiceTest {
     private MockHttpServletRequest request;
 
     @BeforeEach
-    void setUp() {
+        void setUp() {
         ReflectionTestUtils.setField(uploadService, "uploadDir", "test-uploads");
         request = new MockHttpServletRequest();
         request.setRemoteAddr("127.0.0.1");
 
-        // Mock save() trả về record bất kỳ
-        when(fileRecordRepository.save(any(FileRecord.class)))
+        lenient().when(fileRecordRepository.save(any(FileRecord.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
-    }
+        }
 
     @Test
     @DisplayName("TC-SV-01: File hợp lệ → upload thành công, lưu DB với status SUCCESS")
