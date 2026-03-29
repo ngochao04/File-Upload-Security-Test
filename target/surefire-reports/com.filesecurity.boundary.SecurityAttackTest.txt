@@ -1,0 +1,17 @@
+-------------------------------------------------------------------------------
+Test set: com.filesecurity.boundary.SecurityAttackTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.084 s <<< FAILURE! -- in com.filesecurity.boundary.SecurityAttackTest
+com.filesecurity.boundary.SecurityAttackTest.testIsNameSafeDetectsPathTraversal -- Time elapsed: 0.020 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at com.filesecurity.boundary.SecurityAttackTest.testIsNameSafeDetectsPathTraversal(SecurityAttackTest.java:80)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+

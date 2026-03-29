@@ -535,9 +535,15 @@ async function doUpload() {
         showResult(data);
         await refreshAll();
     } catch (e) {
-        clearInterval(interval);
-        showResult({ success: false, message: 'Lỗi kết nối: ' + e.message });
-    }
+    clearInterval(interval);
+    progressWrap.classList.remove('show');
+    showResult({ 
+        success: false, 
+        message: 'File vượt quá kích thước tối đa cho phép (10MB). Upload bị từ chối.'
+    });
+    // Vẫn refresh lịch sử để hiện record mới
+    await refreshAll();
+}
 
     uploadBtn.disabled = false;
     uploadBtn.textContent = 'Kiểm tra & Upload';

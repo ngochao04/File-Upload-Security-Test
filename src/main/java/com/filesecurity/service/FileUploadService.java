@@ -120,24 +120,27 @@ public class FileUploadService {
         }
     }
 
-    private UploadResult saveAndReturn(boolean success, String originalName,
-                                        UploadResult.ValidationDetail detail,
-                                        String clientIp, String reason,
-                                        FileRecord.UploadStatus status) {
-        FileRecord record = FileRecord.builder()
-            .originalName(originalName)
-            .sanitizedName(detail != null ? detail.getSanitizedFileName() : originalName)
-            .storedName("N/A")
-            .filePath("N/A")
-            .fileSize(detail != null ? detail.getFileSizeBytes() : 0L)
-            .mimeType(detail != null ? detail.getDetectedMimeType() : "unknown")
-            .extension(detail != null ? detail.getFileExtension() : "")
-            .uploadStatus(status)
-            .rejectionReason(reason)
-            .uploadedAt(LocalDateTime.now())
-            .uploaderIp(clientIp)
-            .build();
-        fileRecordRepository.save(record);
+        private UploadResult saveAndReturn(boolean success, String originalName,
+                                            UploadResult.ValidationDetail detail,
+                                            String clientIp, String reason,
+                                            FileRecord.UploadStatus status) {
+            // Thay "N/A" bằng UUID để tránh duplicate key
+            String uniquePlaceholder = "REJECTED_" + UUID.randomUUID();
+
+            FileRecord record = FileRecord.builder()
+                .originalName(originalName)
+                .sanitizedName(detail != null ? detail.getSanitizedFileName() : originalName)
+                .storedName(uniquePlaceholder)       // ← sửa ở đây
+                .filePath("N/A")
+                .fileSize(detail != null ? detail.getFileSizeBytes() : 0L)
+                .mimeType(detail != null ? detail.getDetectedMimeType() : "unknown")
+                .extension(detail != null ? detail.getFileExtension() : "")
+                .uploadStatus(status)
+                .rejectionReason(reason)
+                .uploadedAt(LocalDateTime.now())
+                .uploaderIp(clientIp)
+                .build();
+            fileRecordRepository.save(record);
 
         log.warn("Upload REJECTED: file='{}', reason='{}'", originalName, reason);
 
